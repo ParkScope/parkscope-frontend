@@ -622,3 +622,51 @@ const ParkingMap: FC<ParkingMapProps> = ({ floor, vehicles, highlightedVehicleId
     </div>
   );
 };
+
+const CameraModal: FC<CameraModalProps> = React.memo(({ imageUrl, vehiclePlate, onClose }) => (
+  <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div
+      className="bg-white rounded-2xl relative max-w-4xl w-full max-h-[90vh] overflow-hidden"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="bg-gradient-to-r from-blue-600 to-purple-700 p-4 text-white">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Camera className="w-6 h-6" />
+            <h3 className="text-xl font-bold">실시간 주차장 카메라</h3>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/20">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <Wifi className="w-4 h-4" />
+          <span className="text-sm opacity-90">차량번호: {vehiclePlate}</span>
+          <span className="text-sm opacity-90 ml-4">● LIVE</span>
+        </div>
+      </div>
+      <div className="p-4">
+        <img src={imageUrl} alt={`${vehiclePlate} 차량 실시간 카메라`} className="w-full rounded-xl" />
+      </div>
+    </div>
+  </div>
+));
+
+// --- 메인 페이지 컴포넌트 ---
+export default function SmartParkingSystem() {
+  const [selectedLotId, setSelectedLotId] = useState<string>(mockParkingLots[0].id);
+  const [selectedFloorId, setSelectedFloorId] = useState<string>(mockParkingLots[0].floors[0].id);
+  const [searchResult, setSearchResult] = useState<{ vehicle: Vehicle; space: ParkingSpace } | null>(null);
+  const [highlightedVehicleId, setHighlightedVehicleId] = useState<string | null>(null);
+  const [searchMessage, setSearchMessage] = useState<string>("");
+  const [cameraModalUrl, setCameraModalUrl] = useState<string | null>(null);
+  const [cameraVehiclePlate, setCameraVehiclePlate] = useState<string>("");
+  const [showEntranceModal, setShowEntranceModal] = useState<boolean>(false);
+  const [navigationPath, setNavigationPath] = useState<{ x: number; y: number }[] | null>(null);
+  const [animationProgress, setAnimationProgress] = useState<number>(0);
+
+  const selectedLot = useMemo(() => mockParkingLots.find((lot) => lot.id === selectedLotId)!, [selectedLotId]);
+  const selectedFloor = useMemo(
+    () => selectedLot.floors.find((floor) => floor.id === selectedFloorId),
+    [selectedLot, selectedFloorId]
+  );
