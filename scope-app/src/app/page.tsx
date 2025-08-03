@@ -22,46 +22,7 @@ import {
   Menu,
 } from "lucide-react";
 
-// --- 타입 정의 ---
-interface Vehicle {
-  id: string;
-  licensePlate: string;
-  timestamp: Date;
-  imageUrl?: string;
-}
-
-interface ParkingSpace {
-  id: string;
-  spaceNumber: string;
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-  status: "occupied" | "empty";
-  vehicleId?: string;
-}
-
-interface BuildingEntrance {
-  id: string;
-  name: string;
-  position: { x: number; y: number };
-  type: "main" | "side" | "emergency";
-}
-
-interface ParkingFloor {
-  id: string;
-  name: string;
-  mapData: {
-    width: number;
-    height: number;
-    spaces: ParkingSpace[];
-    entrances: BuildingEntrance[];
-  };
-}
-
-interface ParkingLot {
-  id: string;
-  name: string;
-  floors: ParkingFloor[];
-}
+import { Vehicle, ParkingSpace, BuildingEntrance, ParkingFloor, ParkingLot, StatsCardProps, ParkingLotSelectorProps, FloorSelectorProps, ParkingMapProps, SearchBarProps, VehicleInfoProps, CameraModalProps, EntranceSelectionModalProps } from "./types";
 
 // --- 현실적인 목업 데이터 생성 ---
 const mockVehicles: Vehicle[] = [
