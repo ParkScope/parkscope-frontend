@@ -351,3 +351,132 @@ const FloorSelector: FC<FloorSelectorProps> = React.memo(({ floors, selectedFloo
     </div>
   </div>
 ));
+
+const SearchBar: FC<SearchBarProps> = React.memo(({ onSearch, placeholder }) => {
+  const [query, setQuery] = useState("");
+  const handleSearch = () => {
+    if (query.trim()) onSearch(query.trim());
+  };
+
+  return (
+    <div className="bg-white rounded-2xl p-6 border border-gray-200">
+      <div className="flex items-center gap-3 mb-4">
+        <Search className="w-6 h-6 text-green-600" />
+        <h2 className="text-xl font-bold text-gray-800">내 차 찾기</h2>
+      </div>
+      <div className="flex gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder={placeholder}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+            className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-white font-semibold text-gray-800 placeholder-gray-500"
+          />
+        </div>
+        <button
+          onClick={handleSearch}
+          className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl transition-transform duration-200 hover:scale-105"
+        >
+          검색
+        </button>
+      </div>
+    </div>
+  );
+});
+
+const VehicleInfo: FC<VehicleInfoProps> = React.memo(({ vehicle, space, onViewCamera, onNavigate }) => (
+  <div className="bg-white rounded-2xl p-6 border border-gray-200">
+    <div className="flex items-center gap-3 mb-6">
+      <Car className="w-6 h-6 text-blue-600" />
+      <h3 className="text-xl font-bold text-gray-800">차량 정보</h3>
+    </div>
+
+    <div className="space-y-5">
+      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+        <div className="flex items-center gap-3 mb-2">
+          <Car className="w-5 h-5 text-blue-600" />
+          <span className="text-sm font-medium text-gray-600">차량번호</span>
+        </div>
+        <p className="font-bold text-2xl text-gray-800">{vehicle.licensePlate}</p>
+      </div>
+
+      <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+        <div className="flex items-center gap-3 mb-2">
+          <MapPin className="w-5 h-5 text-green-600" />
+          <span className="text-sm font-medium text-gray-600">주차위치</span>
+        </div>
+        <p className="font-bold text-xl text-gray-800">{space.spaceNumber}번 구역</p>
+      </div>
+
+      <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
+        <div className="flex items-center gap-3 mb-2">
+          <Clock className="w-5 h-5 text-orange-600" />
+          <span className="text-sm font-medium text-gray-600">주차시간</span>
+        </div>
+        <p className="font-semibold text-gray-800">{vehicle.timestamp.toLocaleString("ko-KR")}</p>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 gap-3 mt-6">
+      {vehicle.imageUrl && (
+        <button
+          onClick={() => onViewCamera(vehicle.imageUrl!)}
+          className="w-full py-3 px-4 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-transform duration-200 hover:scale-105"
+        >
+          <Camera className="w-5 h-5" />
+          실시간 카메라 보기
+        </button>
+      )}
+      <button
+        onClick={onNavigate}
+        className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-transform duration-200 hover:scale-105"
+      >
+        <Navigation className="w-5 h-5" />
+        길찾기 시작
+      </button>
+    </div>
+  </div>
+));
+
+const EntranceSelectionModal: FC<EntranceSelectionModalProps> = React.memo(({ entrances, onSelectEntrance, onClose }) => (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <DoorOpen className="w-6 h-6 text-blue-600" />
+          <h3 className="text-xl font-bold text-gray-800">입구 선택</h3>
+        </div>
+        <button onClick={onClose} className="p-2 text-gray-500 hover:bg-gray-100 rounded-full">
+          <X className="w-6 h-6" />
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {entrances.map((entrance) => (
+          <button
+            key={entrance.id}
+            onClick={() => onSelectEntrance(entrance)}
+            className={`w-full p-4 rounded-xl text-left border-2 transition-all duration-200 ${
+              entrance.type === "main"
+                ? "border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 hover:border-blue-300"
+                : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <DoorOpen className={`w-5 h-5 ${entrance.type === "main" ? "text-blue-600" : "text-gray-500"}`} />
+                <span className="font-semibold">{entrance.name}</span>
+              </div>
+              {entrance.type === "main" && (
+                <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full font-semibold">추천</span>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+));
