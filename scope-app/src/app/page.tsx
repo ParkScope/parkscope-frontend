@@ -1,86 +1,12 @@
 "use client";
-import React, { useState, useMemo, FC, useEffect, useCallback } from "react";
-import {
-  Search,
-  Car,
-  MapPin,
-  Users,
-  Clock,
-  Layers,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Camera,
-  ParkingCircle,
-  Building,
-  ChevronDown,
-  X,
-  Navigation,
-  Wifi,
-  DoorOpen,
-  BarChart3,
-  Menu,
-} from "lucide-react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { Search, Car, Users, Clock, Layers, ParkingCircle, Building, Menu } from "lucide-react";
 
-import { Vehicle, ParkingSpace, BuildingEntrance, ParkingFloor, ParkingLot, StatsCardProps, ParkingLotSelectorProps, FloorSelectorProps, ParkingMapProps, SearchBarProps, VehicleInfoProps, CameraModalProps, EntranceSelectionModalProps } from "./types";
+import { Vehicle, ParkingSpace, BuildingEntrance } from "./types";
 
 import { mockVehicles, mockParkingLots } from "./data/mockData";
 
 import { calculatePath } from "./utils/pathCalculator";
-
-// --- 컴포넌트 Props 타입 정의 ---
-interface StatsCardProps {
-  icon: React.ElementType;
-  title: string;
-  value: number | string;
-  description: string;
-  gradient: string;
-}
-
-interface ParkingLotSelectorProps {
-  lots: ParkingLot[];
-  selectedLotId: string;
-  onLotChange: (lotId: string) => void;
-}
-
-interface FloorSelectorProps {
-  floors: ParkingFloor[];
-  selectedFloorId: string;
-  onFloorChange: (floorId: string) => void;
-}
-
-interface ParkingMapProps {
-  floor: ParkingFloor;
-  vehicles: Vehicle[];
-  highlightedVehicleId: string | null;
-  onSpaceClick: (space: ParkingSpace) => void;
-  navigationPath: { x: number; y: number }[] | null;
-  animationProgress: number;
-}
-
-interface SearchBarProps {
-  onSearch: (query: string) => void;
-  placeholder: string;
-}
-
-interface VehicleInfoProps {
-  vehicle: Vehicle;
-  space: ParkingSpace;
-  onViewCamera: (imageUrl: string) => void;
-  onNavigate: () => void;
-}
-
-interface CameraModalProps {
-  imageUrl: string;
-  vehiclePlate: string;
-  onClose: () => void;
-}
-
-interface EntranceSelectionModalProps {
-  entrances: BuildingEntrance[];
-  onSelectEntrance: (entrance: BuildingEntrance) => void;
-  onClose: () => void;
-}
 
 import StatsCard from "./components/StatsCard";
 
