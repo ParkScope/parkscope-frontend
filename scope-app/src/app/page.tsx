@@ -670,3 +670,111 @@ export default function SmartParkingSystem() {
     () => selectedLot.floors.find((floor) => floor.id === selectedFloorId),
     [selectedLot, selectedFloorId]
   );
+
+  // 애니메이션 효과
+  useEffect(() => {
+    if (navigationPath) {
+      const interval = setInterval(() => {
+        setAnimationProgress((prev) => {
+          const next = prev + 0.02;
+          return next >= 1 ? 0 : next;
+        });
+      }, 50);
+      return () => clearInterval(interval);
+    }
+  }, [navigationPath]);
+
+  const handleLotChange = useCallback((lotId: string) => {
+    const newLot = mockParkingLots.find((lot) => lot.id === lotId)!;
+    setSelectedLotId(lotId);
+    setSelectedFloorId(newLot.floors[0].id);
+    setSearchResult(null);
+    setHighlightedVehicleId(null);
+    setSearchMessage("");
+    setNavigationPath(null);
+  }, []);
+
+  const lotStats = useMemo(() => {
+    let totalSpots = 0;
+    let occupiedSpots = 0;
+    selectedLot.floors.forEach((floor) => {
+      totalSpots += floor.mapData.spaces.length;
+      occupiedSpots += floor.mapData.spaces.filter((s) => s.status === "occupied").length;
+    });
+    return { totalSpots, occupiedSpots, floorCount: selectedLot.floors.length };
+  }, [selectedLot]);
+
+  const handleSearch = useCallback(
+    (query: string) => {
+      let found = false;
+      for (const lot of mockParkingLots) {
+        for (const floor of lot.floors) {
+          for (const space of floor.mapData.spaces) {
+            const vehicle = mockVehicles.find((v) => v.id === space.vehicleId);
+            if (vehicle && vehicle.licensePlate.includes(query)) {
+              if (selectedLotId !== lot.id) {
+                handleLotChange(lot.id);
+              }
+              setSelectedFloorId(floor.id);
+              setSearchResult({ vehicle, space });
+              setHighlightedVehicleId(vehicle.id);
+              setSearchMessage("");
+              setNavigationPath(null);
+              found = true;
+              break;
+            }
+          }
+          if (found) break;
+        }
+        if (found) break;
+      }
+      if (!found) {
+        setSearchResult(null);
+        setHighlightedVehicleId(null);
+        setSearchMessage(`'${query}' 차량을 찾을 수 없습니다.`);
+        setNavigationPath(null);
+      }
+    },
+    [selectedLotId, handleLotChange]
+  );
+
+  const handleSpaceClick = useCallback((space: ParkingSpace) => {
+    if (space.vehicleId) {
+      const vehicle = mockVehicles.find((v) => v.id === space.vehicleId)!;
+      setSearchResult({ vehicle, space });
+      setHighlightedVehicleId(vehicle.id);
+      setNavigationPath(null);
+    }
+  }, []);
+
+  const handleViewCamera = useCallback(
+    (imageUrl: string) => {
+      if (searchResult) {
+        setCameraVehiclePlate(searchResult.vehicle.licensePlate);
+      }
+      setCameraModalUrl(imageUrl);
+    },
+    [searchResult]
+  );
+
+  const handleNavigate = useCallback(() => {
+    setShowEntranceModal(true);
+  }, []);
+
+  const handleSelectEntrance = useCallback(
+    (entrance: BuildingEntrance) => {
+      if (searchResult && selectedFloor) {
+        const targetSpace = searchResult.space;
+        const targetPosition = {
+          x: targetSpace.position.x + targetSpace.size.width / 2,
+          y: targetSpace.position.y + targetSpace.size.height / 2,
+        };
+
+        const path = calculatePath(entrance.position, targetPosition);
+        setNavigationPath(path);
+        setAnimationProgress(0);
+      }
+      setShowEntranceModal(false);
+    },
+    [searchResult, selectedFloor]
+  );
