@@ -191,3 +191,73 @@ const mockParkingLots: ParkingLot[] = [
     ],
   },
 ];
+
+// --- 길찾기 경로 계산 함수 ---
+const calculatePath = (start: { x: number; y: number }, end: { x: number; y: number }): { x: number; y: number }[] => {
+  const path = [];
+  const steps = 20;
+
+  // 직선 경로
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = start.x + (end.x - start.x) * t;
+    const y = start.y + (end.y - start.y) * t;
+    path.push({ x, y });
+  }
+
+  return path;
+};
+
+// --- 컴포넌트 Props 타입 정의 ---
+interface StatsCardProps {
+  icon: React.ElementType;
+  title: string;
+  value: number | string;
+  description: string;
+  gradient: string;
+}
+
+interface ParkingLotSelectorProps {
+  lots: ParkingLot[];
+  selectedLotId: string;
+  onLotChange: (lotId: string) => void;
+}
+
+interface FloorSelectorProps {
+  floors: ParkingFloor[];
+  selectedFloorId: string;
+  onFloorChange: (floorId: string) => void;
+}
+
+interface ParkingMapProps {
+  floor: ParkingFloor;
+  vehicles: Vehicle[];
+  highlightedVehicleId: string | null;
+  onSpaceClick: (space: ParkingSpace) => void;
+  navigationPath: { x: number; y: number }[] | null;
+  animationProgress: number;
+}
+
+interface SearchBarProps {
+  onSearch: (query: string) => void;
+  placeholder: string;
+}
+
+interface VehicleInfoProps {
+  vehicle: Vehicle;
+  space: ParkingSpace;
+  onViewCamera: (imageUrl: string) => void;
+  onNavigate: () => void;
+}
+
+interface CameraModalProps {
+  imageUrl: string;
+  vehiclePlate: string;
+  onClose: () => void;
+}
+
+interface EntranceSelectionModalProps {
+  entrances: BuildingEntrance[];
+  onSelectEntrance: (entrance: BuildingEntrance) => void;
+  onClose: () => void;
+}
