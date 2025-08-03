@@ -261,3 +261,93 @@ interface EntranceSelectionModalProps {
   onSelectEntrance: (entrance: BuildingEntrance) => void;
   onClose: () => void;
 }
+
+// --- 컴포넌트 구현 ---
+const StatsCard: FC<StatsCardProps> = React.memo(({ icon: Icon, title, value, description, gradient }) => (
+  <div className={`relative overflow-hidden rounded-2xl p-6 text-white bg-gradient-to-br ${gradient}`}>
+    <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
+      <Icon className="w-full h-full" />
+    </div>
+    <div className="relative z-10">
+      <div className="flex items-center justify-between mb-4">
+        <Icon className="h-8 w-8 opacity-80" />
+      </div>
+      <p className="text-sm opacity-80 font-medium">{title}</p>
+      <p className="text-3xl font-bold mt-1 mb-2">{value}</p>
+      <p className="text-xs opacity-70">{description}</p>
+    </div>
+  </div>
+));
+
+const ParkingLotSelector: FC<ParkingLotSelectorProps> = React.memo(({ lots, selectedLotId, onLotChange }) => (
+  <div className="bg-white rounded-2xl p-6 border border-gray-200">
+    <div className="flex items-center gap-3 mb-4">
+      <Building className="w-6 h-6 text-blue-600" />
+      <h3 className="text-lg font-bold text-gray-800">주차장 선택</h3>
+    </div>
+    <div className="relative">
+      <select
+        value={selectedLotId}
+        onChange={(e) => onLotChange(e.target.value)}
+        className="w-full appearance-none bg-gray-50 border-2 border-gray-200 rounded-xl py-4 px-4 pr-10 text-gray-800 font-semibold focus:outline-none focus:ring-4 focus:ring-blue-300 focus:border-blue-400"
+      >
+        {lots.map((lot) => (
+          <option key={lot.id} value={lot.id}>
+            {lot.name}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 text-blue-600 pointer-events-none" />
+    </div>
+  </div>
+));
+
+const FloorSelector: FC<FloorSelectorProps> = React.memo(({ floors, selectedFloorId, onFloorChange }) => (
+  <div className="bg-white rounded-2xl p-6 border border-gray-200">
+    <div className="flex items-center gap-3 mb-4">
+      <Layers className="w-6 h-6 text-purple-600" />
+      <h3 className="text-lg font-bold text-gray-800">층별 현황</h3>
+    </div>
+    <div className="space-y-3">
+      {floors.map((floor) => {
+        const total = floor.mapData.spaces.length;
+        const occupied = floor.mapData.spaces.filter((s) => s.status === "occupied").length;
+        const occupancyRate = Math.round((occupied / total) * 100);
+        const isSelected = selectedFloorId === floor.id;
+
+        return (
+          <button
+            key={floor.id}
+            onClick={() => onFloorChange(floor.id)}
+            className={`w-full p-4 rounded-xl text-left transition-all duration-300 ${
+              isSelected
+                ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg"
+                : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <span className="font-bold text-xl">{floor.name}</span>
+                <div className="text-sm opacity-80 mt-1 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  주차율 {occupancyRate}%
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-lg font-bold ${isSelected ? "text-white" : "text-gray-600"}`}>
+                  {occupied}/{total}
+                </div>
+                <div className={`w-16 h-2 rounded-full mt-1 ${isSelected ? "bg-white/30" : "bg-gray-300"}`}>
+                  <div
+                    className={`h-full rounded-full ${isSelected ? "bg-white" : "bg-red-400"}`}
+                    style={{ width: `${occupancyRate}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+));
