@@ -39,7 +39,7 @@ export const validateImageUrl = async (imageUrl: string): Promise<boolean> => {
 
 // 대체 이미지 URL 생성
 export const getFallbackImageUrl = (): string => {
-  return FALLBACK_IMAGE_URL;
+  return FALLBACK_IMAGE_URL ?? "";
 };
 
 // API 요청 헬퍼 함수
