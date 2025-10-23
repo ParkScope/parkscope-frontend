@@ -3,6 +3,8 @@ interface Vehicle {
   licensePlate: string;
   timestamp: Date;
   imageUrl?: string;
+  confidence?: number; // OCR 인식 신뢰도 (0-1)
+  isFromAPI?: boolean; // API에서 가져온 데이터인지 구분
 }
 
 interface ParkingSpace {
@@ -92,4 +94,61 @@ interface EntranceSelectionModalProps {
   onClose: () => void;
 }
 
-export type { Vehicle, ParkingSpace, BuildingEntrance, ParkingFloor, ParkingLot, StatsCardProps, ParkingLotSelectorProps, FloorSelectorProps, ParkingMapProps, SearchBarProps, VehicleInfoProps, CameraModalProps, EntranceSelectionModalProps };
+// ESP32-CAM API 관련 타입 정의
+interface OCRResult {
+  _id: string;
+  filename: string;
+  ocr_text: string; // 인식된 번호판 텍스트
+  confidence: number;
+  processing_ms: number;
+  date_tag: string;
+  created_at: string;
+  json_path: string;
+  photo_url: string;
+}
+
+interface APIResponseWrapper<T> {
+  status: string;
+  data: T;
+}
+
+interface ParkingStatistics {
+  total_spaces: number;
+  occupied_spaces: number;
+  available_spaces: number;
+  occupancy_rate: number;
+  last_updated: string;
+}
+
+interface APIResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+interface RealTimeUpdateProps {
+  onDataUpdate: (vehicles: Vehicle[]) => void;
+  isActive: boolean;
+}
+
+export type {
+  Vehicle,
+  ParkingSpace,
+  BuildingEntrance,
+  ParkingFloor,
+  ParkingLot,
+  StatsCardProps,
+  ParkingLotSelectorProps,
+  FloorSelectorProps,
+  ParkingMapProps,
+  SearchBarProps,
+  VehicleInfoProps,
+  CameraModalProps,
+  EntranceSelectionModalProps,
+  OCRResult,
+  ParkingStatistics,
+  APIResponse,
+  APIResponseWrapper,
+  RealTimeUpdateProps,
+};
