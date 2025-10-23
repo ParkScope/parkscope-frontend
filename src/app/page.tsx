@@ -1,12 +1,15 @@
 "use client";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { Search, Car, Users, Clock, Layers, ParkingCircle, Building, Menu } from "lucide-react";
+import { Search, Car, Users, Clock, Layers, ParkingCircle, Building, Menu, X, RefreshCw } from "lucide-react";
 
 import { Vehicle, ParkingSpace, BuildingEntrance } from "./types";
 
 import { mockVehicles, mockParkingLots } from "./data/mockData";
 
 import { calculatePath } from "./utils/pathCalculator";
+
+import { getLatestResult } from "./utils/apiClient";
+import { convertImageUrl } from "./utils/apiClient";
 
 import StatsCard from "./components/StatsCard";
 
@@ -24,10 +27,13 @@ import ParkingMap from "./components/ParkingMap";
 
 import CameraModal from "./components/CameraModal";
 
+import RealTimeUpdate from "./components/RealTimeUpdate";
+
 // --- 메인 페이지 컴포넌트 ---
 export default function SmartParkingSystem() {
-  const [selectedLotId, setSelectedLotId] = useState<string>(mockParkingLots[0].id);
-  const [selectedFloorId, setSelectedFloorId] = useState<string>(mockParkingLots[0].floors[0].id);
+  const [parkingLots, setParkingLots] = useState(mockParkingLots);
+  const [selectedLotId, setSelectedLotId] = useState<string>(parkingLots[0].id);
+  const [selectedFloorId, setSelectedFloorId] = useState<string>(parkingLots[0].floors[0].id);
   const [searchResult, setSearchResult] = useState<{ vehicle: Vehicle; space: ParkingSpace } | null>(null);
   const [highlightedVehicleId, setHighlightedVehicleId] = useState<string | null>(null);
   const [searchMessage, setSearchMessage] = useState<string>("");
@@ -37,8 +43,13 @@ export default function SmartParkingSystem() {
   const [navigationPath, setNavigationPath] = useState<{ x: number; y: number }[] | null>(null);
   const [animationProgress, setAnimationProgress] = useState<number>(0);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  
+  // API 관련 state
+  const [realTimeActive, setRealTimeActive] = useState<boolean>(false);
+  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
-  const selectedLot = useMemo(() => mockParkingLots.find((lot) => lot.id === selectedLotId)!, [selectedLotId]);
+  const selectedLot = useMemo(() => parkingLots.find((lot) => lot.id === selectedLotId)!, [selectedLotId, parkingLots]);
   const selectedFloor = useMemo(
     () => selectedLot.floors.find((floor) => floor.id === selectedFloorId),
     [selectedLot, selectedFloorId]
@@ -63,14 +74,14 @@ export default function SmartParkingSystem() {
   }, [startAnimation]);
 
   const handleLotChange = useCallback((lotId: string) => {
-    const newLot = mockParkingLots.find((lot) => lot.id === lotId)!;
+    const newLot = parkingLots.find((lot) => lot.id === lotId)!;
     setSelectedLotId(lotId);
     setSelectedFloorId(newLot.floors[0].id);
     setSearchResult(null);
     setHighlightedVehicleId(null);
     setSearchMessage("");
     setNavigationPath(null);
-  }, []);
+  }, [parkingLots]);
 
   const lotStats = useMemo(() => {
     let totalSpots = 0;
@@ -80,16 +91,20 @@ export default function SmartParkingSystem() {
       occupiedSpots += floor.mapData.spaces.filter((s) => s.status === "occupied").length;
     });
     return { totalSpots, occupiedSpots, floorCount: selectedLot.floors.length };
-  }, [selectedLot]);
+  }, [selectedLot]); // 원래대로 복원
 
   const handleSearch = useCallback(
-    (query: string) => {
+    async (query: string) => {
+      console.log(`🔍 검색 시작: "${query}"`);
+      
+      // 먼저 기존 로컬 데이터에서 검색
       let found = false;
-      for (const lot of mockParkingLots) {
+      for (const lot of parkingLots) {
         for (const floor of lot.floors) {
           for (const space of floor.mapData.spaces) {
-            const vehicle = mockVehicles.find((v) => v.id === space.vehicleId);
+            const vehicle = vehicles.find((v) => v.id === space.vehicleId);
             if (vehicle && vehicle.licensePlate.includes(query)) {
+              console.log(`✅ 로컬에서 차량 발견: ${vehicle.licensePlate}`);
               if (selectedLotId !== lot.id) {
                 handleLotChange(lot.id);
               }
@@ -106,24 +121,162 @@ export default function SmartParkingSystem() {
         }
         if (found) break;
       }
-      if (!found) {
+
+      // 로컬 데이터에서 찾지 못한 경우, API 호출
+      if (!found && query.trim()) {
+        console.log(`🌐 로컬에서 찾지 못함. API 호출 시작...`);
+        try {
+          setIsSearching(true);
+          setSearchMessage("ESP32-CAM API에서 차량 정보를 검색 중...");
+          
+          // 모든 차량번호에 대해 실제 ESP32-CAM API 호출
+          const response = await getLatestResult();
+          console.log(`📡 API 응답:`, response);
+          
+          if (response.success && response.data) {
+            console.log(`✅ API 성공! 위치: ${response.data.ocr_text}`);
+            
+            // 이미지 URL 변환
+            let validImageUrl = undefined;
+            if (response.data.photo_url) {
+              validImageUrl = convertImageUrl(response.data.photo_url);
+              console.log('변환된 이미지 URL:', validImageUrl);
+            }
+            
+            // API에서 받은 데이터로 새로운 Vehicle 생성
+            const apiVehicle: Vehicle = {
+              id: `api_${Date.now()}`,
+              licensePlate: query, // 입력된 차량번호 그대로 사용
+              timestamp: new Date(response.data.created_at || new Date()),
+              imageUrl: validImageUrl,
+              confidence: response.data.confidence,
+              isFromAPI: true,
+            };
+
+            // API 차량을 vehicles 배열에 추가 (중복 방지)
+            setVehicles(prev => {
+              const exists = prev.find(v => v.licensePlate === apiVehicle.licensePlate);
+              if (!exists) {
+                return [...prev, apiVehicle];
+              }
+              return prev;
+            });
+
+            // API에서 받은 실제 위치 정보로 주차공간 배치
+            const firstLot = parkingLots[0];
+            const firstFloor = firstLot.floors[0];
+            
+            let targetSpace;
+            
+            // API에서 받은 위치 정보로 주차공간 매핑
+            const apiLocation = response.data.ocr_text.toUpperCase();
+            console.log(`🎯 API에서 받은 위치: ${response.data.ocr_text} -> ${apiLocation}`);
+            
+            // 해당 위치의 주차공간 찾기 (빈 공간만)
+            targetSpace = firstFloor.mapData.spaces.find(space => 
+              space.spaceNumber === apiLocation && space.status === "empty"
+            );
+            
+            console.log(`🅿️ 매핑된 주차공간:`, targetSpace ? `${targetSpace.spaceNumber} (${targetSpace.status})` : '없음');
+            
+            // API 위치를 찾지 못한 경우 처리
+            if (!targetSpace) {
+              const occupiedSpace = firstFloor.mapData.spaces.find(space => 
+                space.spaceNumber === apiLocation
+              );
+              if (occupiedSpace && occupiedSpace.status === "occupied") {
+                console.warn(`⚠️ ${apiLocation} 공간이 이미 점유됨. 대체 공간 찾는 중...`);
+                targetSpace = firstFloor.mapData.spaces.find(space => space.status === "empty");
+              } else {
+                console.warn(`❌ ${apiLocation} 공간을 찾을 수 없음. 대체 공간 찾는 중...`);
+                targetSpace = firstFloor.mapData.spaces.find(space => space.status === "empty");
+              }
+            }
+            
+            if (targetSpace) {
+              console.log(`✅ 차량 배치 완료: ${query} -> ${targetSpace.spaceNumber}`);
+              
+              // parkingLots 상태를 업데이트하여 주차공간에 차량 배치
+              setParkingLots(prevLots => {
+                const newLots = prevLots.map(lot => {
+                  if (lot.id === firstLot.id) {
+                    return {
+                      ...lot,
+                      floors: lot.floors.map(floor => {
+                        if (floor.id === firstFloor.id) {
+                          return {
+                            ...floor,
+                            mapData: {
+                              ...floor.mapData,
+                              spaces: floor.mapData.spaces.map(space => {
+                                if (space.id === targetSpace!.id) {
+                                  return {
+                                    ...space,
+                                    status: "occupied" as const,
+                                    vehicleId: apiVehicle.id
+                                  };
+                                }
+                                return space;
+                              })
+                            }
+                          };
+                        }
+                        return floor;
+                      })
+                    };
+                  }
+                  return lot;
+                });
+                return newLots;
+              });
+              
+              setSelectedLotId(firstLot.id);
+              setSelectedFloorId(firstFloor.id);
+              setSearchResult({ vehicle: apiVehicle, space: targetSpace });
+              setHighlightedVehicleId(apiVehicle.id);
+              setSearchMessage(""); // 성공 시 메시지 지우기
+              setNavigationPath(null);
+              found = true; // 🔥 API 성공 시 found = true 설정
+              console.log(`🎉 검색 성공! found = ${found}`);
+            } else {
+              console.error(`❌ 배치할 주차공간을 찾을 수 없음`);
+              setSearchMessage("주차공간이 모두 사용중입니다.");
+            }
+          } else {
+            console.error(`❌ API 실패:`, response.error);
+            setSearchMessage(`ESP32-CAM API 오류: ${response.error || '데이터를 가져올 수 없습니다.'}`);
+          }
+        } catch (error) {
+          console.error('💥 API 호출 실패:', error);
+          setSearchMessage("ESP32-CAM API 호출 중 오류가 발생했습니다. API 서버가 실행 중인지 확인해주세요.");
+        } finally {
+          setIsSearching(false);
+        }
+      }
+
+      // 🔥 최종 검사 - found가 false인 경우에만 오류 메시지
+      console.log(`🏁 최종 검사: found = ${found}, query = "${query}"`);
+      if (!found && query.trim()) {
+        console.log(`❌ 최종적으로 차량을 찾지 못함`);
         setSearchResult(null);
         setHighlightedVehicleId(null);
         setSearchMessage(`'${query}' 차량을 찾을 수 없습니다.`);
         setNavigationPath(null);
+      } else if (found) {
+        console.log(`✅ 차량 검색 성공!`);
       }
     },
-    [selectedLotId, handleLotChange]
+    [selectedLotId, handleLotChange, vehicles, parkingLots]
   );
 
   const handleSpaceClick = useCallback((space: ParkingSpace) => {
     if (space.vehicleId) {
-      const vehicle = mockVehicles.find((v) => v.id === space.vehicleId)!;
+      const vehicle = vehicles.find((v) => v.id === space.vehicleId)!;
       setSearchResult({ vehicle, space });
       setHighlightedVehicleId(vehicle.id);
       setNavigationPath(null);
     }
-  }, []);
+  }, [vehicles]);
 
   const handleViewCamera = useCallback(
     (imageUrl: string) => {
@@ -156,6 +309,16 @@ export default function SmartParkingSystem() {
     },
     [searchResult, selectedFloor]
   );
+
+  // 실시간 데이터 업데이트 핸들러
+  const handleDataUpdate = useCallback((newVehicles: Vehicle[]) => {
+    setVehicles(prev => [...prev, ...newVehicles]);
+  }, []);
+
+  // 실시간 업데이트 토글
+  const toggleRealTimeUpdate = useCallback(() => {
+    setRealTimeActive(prev => !prev);
+  }, []);
 
   if (!selectedFloor) {
     return (
@@ -255,13 +418,13 @@ export default function SmartParkingSystem() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
           {/* 사이드바 */}
           <aside className={`lg:col-span-1 space-y-4 sm:space-y-6 ${sidebarOpen ? "block" : "hidden lg:block"}`}>
-            <ParkingLotSelector lots={mockParkingLots} selectedLotId={selectedLotId} onLotChange={handleLotChange} />
+            <ParkingLotSelector lots={parkingLots} selectedLotId={selectedLotId} onLotChange={handleLotChange} />
             <FloorSelector
               floors={selectedLot.floors}
               selectedFloorId={selectedFloorId}
               onFloorChange={setSelectedFloorId}
             />
-            <SearchBar onSearch={handleSearch} placeholder="차량번호 입력 (예: 12가3456)" />
+            <SearchBar onSearch={handleSearch} placeholder="차량번호 입력 (모든 번호 검색 가능)" />
 
             {searchResult ? (
               <VehicleInfo
@@ -272,24 +435,59 @@ export default function SmartParkingSystem() {
               />
             ) : (
               searchMessage && (
-                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 text-yellow-800 p-4 sm:p-6 rounded-2xl">
+                <div className={`border-l-4 p-4 sm:p-6 rounded-2xl ${
+                  isSearching 
+                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400 text-blue-800'
+                    : searchMessage.includes('오류') || searchMessage.includes('찾을 수 없습니다')
+                    ? 'bg-gradient-to-r from-red-50 to-pink-50 border-red-400 text-red-800'
+                    : 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-400 text-yellow-800'
+                }`}>
                   <div className="flex items-center gap-3">
-                    <Search className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />
+                    {isSearching ? (
+                      <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 animate-spin" />
+                    ) : searchMessage.includes('오류') || searchMessage.includes('찾을 수 없습니다') ? (
+                      <X className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
+                    ) : (
+                      <Search className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />
+                    )}
                     <div>
-                      <p className="font-bold text-base sm:text-lg">검색 결과</p>
+                      <p className="font-bold text-base sm:text-lg">
+                        {isSearching ? 'API 검색 중...' : '검색 결과'}
+                      </p>
                       <p className="mt-1 text-sm sm:text-base">{searchMessage}</p>
                     </div>
                   </div>
                 </div>
               )
             )}
+
+            {/* 실시간 업데이트 컴포넌트 */}
+            <RealTimeUpdate
+              onDataUpdate={handleDataUpdate}
+              isActive={realTimeActive}
+            />
+
+            {/* 실시간 업데이트 토글 버튼 */}
+            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-200">
+              <button
+                onClick={toggleRealTimeUpdate}
+                className={`w-full py-3 px-4 font-semibold rounded-xl flex items-center justify-center gap-2 text-sm sm:text-base transition-colors ${
+                  realTimeActive
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                    : 'bg-gradient-to-r from-gray-500 to-gray-600 text-white'
+                }`}
+              >
+                <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${realTimeActive ? 'animate-spin' : ''}`} />
+                {realTimeActive ? '실시간 업데이트 중지' : '실시간 업데이트 시작'}
+              </button>
+            </div>
           </aside>
 
           {/* 메인 지도 */}
           <section className="lg:col-span-3">
             <ParkingMap
               floor={selectedFloor}
-              vehicles={mockVehicles}
+              vehicles={vehicles}
               highlightedVehicleId={highlightedVehicleId}
               onSpaceClick={handleSpaceClick}
               navigationPath={navigationPath}
