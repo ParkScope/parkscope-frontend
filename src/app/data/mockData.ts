@@ -1,30 +1,7 @@
 import { Vehicle, ParkingSpace, BuildingEntrance, ParkingLot } from "../types";
 
 export const mockVehicles: Vehicle[] = [
-  {
-    id: "v1",
-    licensePlate: "12가3456",
-    timestamp: new Date("2024-08-03T10:30:00"),
-    imageUrl: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800&h=600&fit=crop",
-  },
-  {
-    id: "v2",
-    licensePlate: "78나9012",
-    timestamp: new Date("2024-08-03T09:45:00"),
-    imageUrl: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&h=600&fit=crop",
-  },
-  {
-    id: "v3",
-    licensePlate: "34다5678",
-    timestamp: new Date("2024-08-03T11:15:00"),
-    imageUrl: "https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=800&h=600&fit=crop",
-  },
-  {
-    id: "v4",
-    licensePlate: "00아0000",
-    timestamp: new Date("2024-08-03T12:00:00"),
-    imageUrl: "https://images.unsplash.com/photo-1494976688153-d4cc4fc2bd6b?w=800&h=600&fit=crop",
-  },
+  // 시연용: 처음에는 빈 배열로 시작
 ];
 
 // 건물 입구 정의
@@ -64,7 +41,8 @@ export const generateParkingSpaces = (
       const spaceNumber = `${String.fromCharCode(65 + r)}${c + 1}`;
 
       const assignedVehicleId = assignmentMap.get(spaceIndex);
-      const isOccupied = assignedVehicleId ? true : Math.random() < 0.45;
+      // 시연용: 할당된 차량만 점유하고 나머지는 모두 빈 공간
+      const isOccupied = assignedVehicleId ? true : false;
 
       spaces.push({
         id: spaceId,
@@ -79,13 +57,10 @@ export const generateParkingSpaces = (
   return spaces;
 };
 
-// 주차 공간 및 입구 정보가 포함된 층 데이터
-const lotteTower_B1_Spaces = generateParkingSpaces("lotte_B1", 5, 12, 60, 60, [
-  { spaceIndex: 15, vehicleId: "v1" },
-  { spaceIndex: 32, vehicleId: "v2" },
-]);
-const lotteTower_B2_Spaces = generateParkingSpaces("lotte_B2", 6, 12, 60, 60, [{ spaceIndex: 25, vehicleId: "v3" }]);
-const ipark_B1_Spaces = generateParkingSpaces("ipark_B1", 4, 15, 60, 60, [{ spaceIndex: 40, vehicleId: "v4" }]);
+// 주차 공간 및 입구 정보가 포함된 층 데이터 (시연용: 초기에는 모든 공간이 비어있음)
+const lotteTower_B1_Spaces = generateParkingSpaces("lotte_B1", 5, 12, 60, 60, []);
+const lotteTower_B2_Spaces = generateParkingSpaces("lotte_B2", 6, 12, 60, 60, []);
+const ipark_B1_Spaces = generateParkingSpaces("ipark_B1", 4, 15, 60, 60, []);
 
 export const mockParkingLots: ParkingLot[] = [
   {
