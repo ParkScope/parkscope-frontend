@@ -1,5 +1,5 @@
 // ESP32-CAM API 클라이언트
-import { APIResponse, OCRResult } from "../types";
+import { APIResponse, OCRResult, BackendVehicle, BackendParkingSpace, RegisterVehicleRequest } from "../types";
 
 // 환경 변수에서 설정값 가져오기
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -89,4 +89,24 @@ export const getLatestResult = async (): Promise<APIResponse<OCRResult>> => {
 export const getResultsByDate = async (date?: string): Promise<APIResponse<OCRResult[]>> => {
   const targetDate = date || new Date().toISOString().split("T")[0]; // 기본값: 오늘 날짜
   return apiCall<OCRResult[]>(`/result/by-date?date=${targetDate}`);
+};
+
+// --- 백엔드 API 함수들 ---
+
+// 등록된 차량 목록 조회
+export const getVehicles = async (): Promise<APIResponse<BackendVehicle[]>> => {
+  return apiCall<BackendVehicle[]>("/vehicles");
+};
+
+// 차량 등록
+export const registerVehicle = async (vehicleData: RegisterVehicleRequest): Promise<APIResponse<BackendVehicle>> => {
+  return apiCall<BackendVehicle>("/vehicles", {
+    method: "POST",
+    body: JSON.stringify(vehicleData),
+  });
+};
+
+// 주차공간 상태 조회
+export const getParkingSpacesStatus = async (): Promise<APIResponse<BackendParkingSpace[]>> => {
+  return apiCall<BackendParkingSpace[]>("/parking-spaces/status");
 };
