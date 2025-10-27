@@ -8,7 +8,7 @@ import { mockVehicles, mockParkingLots } from "./data/mockData";
 
 import { calculatePath } from "./utils/pathCalculator";
 
-import { getLatestResult } from "./utils/apiClient";
+import { getLatestResult, getVehicles, registerVehicle, getParkingSpacesStatus } from "./utils/apiClient";
 import { convertImageUrl } from "./utils/apiClient";
 
 import StatsCard from "./components/StatsCard";
@@ -48,6 +48,72 @@ export default function SmartParkingSystem() {
   const [realTimeActive, setRealTimeActive] = useState<boolean>(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
   const [isSearching, setIsSearching] = useState<boolean>(false);
+
+  // 백엔드 Vehicle을 프론트엔드 Vehicle로 변환
+  const convertBackendVehicle = useCallback((backendVehicle: any): Vehicle => {
+    return {
+      id: backendVehicle.id,
+      licensePlate: backendVehicle.licensePlate,
+      timestamp: new Date(backendVehicle.timestamp),
+      imageUrl: backendVehicle.imageUrl,
+      confidence: backendVehicle.confidence,
+      isFromAPI: true,
+    };
+  }, []);
+
+  // 페이지 로드 시 백엔드에서 기존 차량 데이터 가져오기
+  const loadExistingData = useCallback(async () => {
+    try {
+      console.log('🔄 백엔드에서 기존 데이터 로드 중...');
+      
+      // 등록된 차량 목록 가져오기
+      const vehiclesResponse = await getVehicles();
+      if (vehiclesResponse.success && vehiclesResponse.data) {
+        const backendVehicles = vehiclesResponse.data.map(convertBackendVehicle);
+        console.log('✅ 백엔드 차량 데이터 로드 완료:', backendVehicles.length, '대');
+        
+        // 기존 목 데이터와 합치기
+        setVehicles(prev => [...prev, ...backendVehicles]);
+        
+        // 주차공간 상태도 가져와서 업데이트
+        const spacesResponse = await getParkingSpacesStatus();
+        if (spacesResponse.success && spacesResponse.data) {
+          console.log('✅ 주차공간 상태 로드 완료:', spacesResponse.data.length, '개');
+          
+          // 주차공간 상태를 반영해서 parkingLots 업데이트
+          setParkingLots(prevLots => {
+            return prevLots.map(lot => ({
+              ...lot,
+              floors: lot.floors.map(floor => ({
+                ...floor,
+                mapData: {
+                  ...floor.mapData,
+                  spaces: floor.mapData.spaces.map(space => {
+                    const backendSpace = spacesResponse.data!.find(bs => bs.spaceId === space.spaceNumber);
+                    if (backendSpace) {
+                      return {
+                        ...space,
+                        status: backendSpace.status,
+                        vehicleId: backendSpace.vehicleId || undefined,
+                      };
+                    }
+                    return space;
+                  })
+                }
+              }))
+            }));
+          });
+        }
+      }
+    } catch (error) {
+      console.error('❌ 백엔드 데이터 로드 실패:', error);
+    }
+  }, [convertBackendVehicle]);
+
+  // 컴포넌트 마운트 시 기존 데이터 로드
+  useEffect(() => {
+    loadExistingData();
+  }, [loadExistingData]);
 
   const selectedLot = useMemo(() => parkingLots.find((lot) => lot.id === selectedLotId)!, [selectedLotId, parkingLots]);
   const selectedFloor = useMemo(
@@ -229,6 +295,29 @@ export default function SmartParkingSystem() {
                 });
                 return newLots;
               });
+              
+              // 백엔드에 차량 정보 저장
+              try {
+                const vehicleData = {
+                  licensePlate: query,
+                  parkingSpaceId: targetSpace.spaceNumber,
+                  timestamp: new Date().toISOString(),
+                  imageUrl: validImageUrl || "",
+                  confidence: response.data.confidence || 0,
+                  ocrResultId: response.data._id,
+                };
+                
+                console.log(`💾 백엔드에 차량 정보 저장 중...`, vehicleData);
+                const saveResponse = await registerVehicle(vehicleData);
+                if (saveResponse.success) {
+                  console.log(`✅ 백엔드 저장 완료:`, saveResponse.data);
+                } else {
+                  console.error(`❌ 백엔드 저장 실패:`, saveResponse.error);
+                }
+              } catch (saveError) {
+                console.error(`💥 백엔드 저장 중 오류:`, saveError);
+                // 저장 실패해도 프론트엔드 동작은 계속
+              }
               
               setSelectedLotId(firstLot.id);
               setSelectedFloorId(firstFloor.id);
