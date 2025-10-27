@@ -132,6 +132,34 @@ interface RealTimeUpdateProps {
   isActive: boolean;
 }
 
+// --- 백엔드 API 응답 타입 정의 ---
+interface BackendVehicle {
+  licensePlate: string;
+  parkingSpaceId: string;
+  timestamp: string;
+  imageUrl: string;
+  confidence: number;
+  ocrResultId: string;
+  id: string;
+  isActive: boolean;
+}
+
+interface BackendParkingSpace {
+  spaceId: string;
+  status: "empty" | "occupied";
+  vehicleId: string | null;
+  lastUpdated: string;
+}
+
+interface RegisterVehicleRequest {
+  licensePlate: string;
+  parkingSpaceId: string;
+  timestamp: string;
+  imageUrl: string;
+  confidence: number;
+  ocrResultId: string;
+}
+
 export type {
   Vehicle,
   ParkingSpace,
@@ -151,4 +179,7 @@ export type {
   APIResponse,
   APIResponseWrapper,
   RealTimeUpdateProps,
+  BackendVehicle,
+  BackendParkingSpace,
+  RegisterVehicleRequest,
 };
