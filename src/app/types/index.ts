@@ -149,6 +149,8 @@ interface BackendParkingSpace {
   status: "empty" | "occupied";
   vehicleId: string | null;
   lastUpdated: string;
+  floorName: string;  // 백엔드에서 추가된 층 정보
+  lotId?: string;     // 주차장 ID (선택사항)
 }
 
 interface RegisterVehicleRequest {
