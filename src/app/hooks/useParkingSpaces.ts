@@ -30,8 +30,14 @@ export const useParkingSpaces = (initialLots: ParkingLot[] = []): UseParkingSpac
               mapData: {
                 ...floor.mapData,
                 spaces: floor.mapData.spaces.map((space) => {
-                  const backendSpace = spacesResponse.data!.find((bs) => bs.spaceId === space.spaceNumber);
+                  // 현재 층에 해당하는 백엔드 데이터만 찾기
+                  const backendSpace = spacesResponse.data!.find((bs) => 
+                    bs.spaceId === space.spaceNumber && 
+                    bs.floorName === floor.name  // 층 정보로 정확히 매칭
+                  );
+                  
                   if (backendSpace) {
+                    console.log(`✅ 층별 매칭 성공: ${floor.name} - ${space.spaceNumber} (차량: ${backendSpace.vehicleId || '없음'})`);
                     return {
                       ...space,
                       status: backendSpace.status,
@@ -44,6 +50,8 @@ export const useParkingSpaces = (initialLots: ParkingLot[] = []): UseParkingSpac
             }))
           }));
         });
+        
+        console.log('✅ 층 정보를 활용한 주차공간 상태 로드 완료');
       }
     } catch (error) {
       console.error('❌ 주차공간 상태 로드 실패:', error);
