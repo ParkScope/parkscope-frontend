@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Building, Save, RefreshCw, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { useFloorInfo } from '../hooks/useFloorInfo';
+import { BackendFloorInfo } from '../types';
 
 interface FloorInfoManagerProps {
-  onFloorInfoUpdate?: (floorInfo: any) => void;
+  onFloorInfoUpdate?: (floorInfo: BackendFloorInfo) => void;
 }
 
 const FloorInfoManager: React.FC<FloorInfoManagerProps> = ({ onFloorInfoUpdate }) => {
