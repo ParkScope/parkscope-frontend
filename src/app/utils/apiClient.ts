@@ -1,5 +1,5 @@
 // ESP32-CAM API 클라이언트
-import { APIResponse, OCRResult, BackendVehicle, BackendParkingSpace, RegisterVehicleRequest } from "../types";
+import { APIResponse, OCRResult, BackendVehicle, BackendParkingSpace, RegisterVehicleRequest, FloorSaveRequest, BackendFloorInfo } from "../types";
 
 // 환경 변수에서 설정값 가져오기
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -109,4 +109,19 @@ export const registerVehicle = async (vehicleData: RegisterVehicleRequest): Prom
 // 주차공간 상태 조회
 export const getParkingSpacesStatus = async (): Promise<APIResponse<BackendParkingSpace[]>> => {
   return apiCall<BackendParkingSpace[]>("/parking-spaces/status");
+};
+
+// --- 층 정보 API 함수들 ---
+
+// 층 정보 저장
+export const saveFloorInfo = async (floorData: FloorSaveRequest): Promise<APIResponse<BackendFloorInfo>> => {
+  return apiCall<BackendFloorInfo>("/floor/save", {
+    method: "POST",
+    body: JSON.stringify(floorData),
+  });
+};
+
+// 최신 층 정보 조회
+export const getLatestFloorInfo = async (): Promise<APIResponse<BackendFloorInfo>> => {
+  return apiCall<BackendFloorInfo>("/floor/latest");
 };
