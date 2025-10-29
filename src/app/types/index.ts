@@ -160,6 +160,18 @@ interface RegisterVehicleRequest {
   ocrResultId: string;
 }
 
+// 층 정보 관련 타입
+interface FloorSaveRequest {
+  floorName: string;
+  sourceFile: string;
+}
+
+interface BackendFloorInfo {
+  status: string;
+  floorName: string;
+  created_at: string;
+}
+
 export type {
   Vehicle,
   ParkingSpace,
@@ -182,4 +194,6 @@ export type {
   BackendVehicle,
   BackendParkingSpace,
   RegisterVehicleRequest,
+  FloorSaveRequest,
+  BackendFloorInfo,
 };
